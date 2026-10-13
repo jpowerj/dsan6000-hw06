@@ -83,7 +83,7 @@ To create this Access Token, **follow the instructions [here](https://docs.githu
 
 ### Background
 
-The dataset you'll be working with for this assignment is the global "High-Resolution Settlement Layer", a dataset constructed by Columbia's [Center for Integrated Earth Systems Information (CIESIN)](https://ciesin.columbia.edu/) where each row represents a tiny (30m-by-30m) "grid cell" on the surface of the earth, and the columns represent some statistically-inferred demographic information about that grid cell: for this assignment, we're focusing on the estimated **population** for various subgroups (men, women, youth under age 5, elderly over age 60, etc.) within this cell.
+The dataset you'll be working with for this assignment is the global "High-Resolution Settlement Layer", a dataset constructed by Columbia's [Center for Integrated Earth Systems Information (CIESIN)](https://ciesin.columbia.edu/) where each row represents a tiny (30m-by-30m) "grid cell" on the surface of the earth<a name='fn1loc'></a><sup>[1](#fn1)</sup>, and the columns represent some statistically-inferred demographic information about that grid cell: for this assignment, we're focusing on the estimated **population** for various subgroups (men, women, youth under age 5, elderly over age 60, etc.) within this cell.
 
 There are lots of important social-scientific reasons for utilizing these grid-based estimates, as a complement to the "standard" ways of chopping up territories that you might expect as the default choice: countries, states, provinces, etc... Since this isn't a social science course, however, I'll just quickly highlight two core factors that motivate the analyses in this assignment.
 
@@ -105,11 +105,68 @@ Thinking counterfactually, and striving to find comparisons to test claims like 
 
 ### The Data Lake Infrastructure
 
-With the choice of this particular data motivated in the previous section, here the link with the DSAN 6000 material comes from **how this data is stored**: CEISIN updates the data each month,  **Data Lake pattern**
+With the choice of this particular data motivated in the previous section, the link with the DSAN 6000 material comes from **how this data is stored**: CIESIN updates the data each month (though you can think about how you might ensure that your analysis here is *scalable* to more frequent weekly or daily updating!), and simply "tosses" a snapshot of that month's data into an S3 bucket, giving rise to a **Data Lake pattern**.
+
+If the use of this buzzword is still confusing (as it is to me), keep in mind the distinctions between this pattern and a **Data Warehouse pattern**:
+
+* If CIESIN used the Data Warehouse pattern, they would instead add the monthly data to a **table** within **structured database** using an **SQL command** like `INSERT INTO <table>`.
+
+  This would then force them into a **schema-on-write** situation: if the data they tried to write into the table with that SQL command did not match the **schema** of the table (for example, if they tried to store the latitude as a string like `"40°41′42″ S"` when the table was expecting a `FLOAT`), it would be rejected.
+  
+* Instead, by using S3 bucket storage here, CIESIN is able to place arbitrary sequences of bytes (bundled together as **objects**, hence "object storage") into the bucket each month.
+  
+  As mentioned in class, this may seem "nice and easy" from the perspective of the data *producer*: no data will ever be rejected when written into the S3 bucket, since it does not enforce a schema! However, it simply passes the issue forwards in time to the data *consumer*, since it gives rise to a **schema-on-read** setup: someone using the data in the future may indeed find one month where latitudes are stored as strings like `"40°41′42″ S"`, and another month where the same latitude is stored as `-40.69500`.
+
+As we've discussed, these are the kinds of issues that arise when moving from OLTP to OLAP that the `.parquet` format aims to alleviate, since `.parquet` files can be stored in an S3 bucket arbitrarily as needed, while still containing their own **schema information** in their within-file metadata footers.
+
+But alas, CIESIN has not adopted the `.parquet` format in this case (for reasons vaguely related to the additional complexities of storing *geospatial* data as opposed to "standard" tabular-numeric data): instead they are in old-school **tsv** format, so we'll need to take that into account as we set up our **Athena connection** to their S3 bucket!
+
+## Part 1: Querying Yemen Data
+
+At the end of HW5, when you subsetted the collection of *all* ACLED events to just the events in **Lebanon**, you it turned out that the 34,122 events recorded for that country were small enough to fit within the RAM of your EC2 instance, motivating your use of `.collect()` followed by `.lazy()` on the collected data to *cache* it within RAM.
+
+Within that same dataset, 108,383 events are recorded for **Yemen**, more than three times the count for Lebanon. Thus we might imagine a scenario where Lebanon's data *can* fit locally in RAM whereas Yemen's *cannot*. And, even if both can fit, remember that we're conducting our analytics here to be **scalable!** We don't know how many new events might be recorded on a given day in either case, especially in light Israel's ongoing [bombardment of southern Lebanon](https://www.nytimes.com/interactive/2026/10/12/world/middleeast/israel-lebanon-destruction.html) and the ongoing [Yemeni Civil War](https://en.wikipedia.org/wiki/Yemeni_civil_war_(2014%E2%80%93present)).
+
+Thus, although in the next part we'll "zoom out" to queries across the entire globe, in this part we'll imagine looking at those 108,383 events in Yemen and trying to identify possible **relationships** between the events and Yemen's underlying demographic landscape: do the events happen more often in regions with disproportionately-many young children, for example?
+
+The last census conducted in Yemen was in 2004, and modern estimates have to be [inferred from this 22-year-old data](https://data.humdata.org/es/dataset/yemen-population-estimates/resource/5a3cb3f9-5148-4f5d-b269-f50c5a81a2d3), meaning that they become less and less reliable over time (especially given the acceleration of forcible displacement after the start of the Civil War in 2014). So, let's use **Athena** to carry out some basic analytics of the population, not based on inferences from 2004 but instead based on the remotely-sensed CIESIN estimates!
+
+### Task 1 (Code Provided): An Overall Population Estimate
+
+First things first, you will need to set up your **Athena Console**, within the **AWS Console** web UI, to carry out queries on the S3 bucket. The bucket containing the Yemen data is located at the following URI:
+
+```
+s3://dsan6000-hrsl/yemen-2020/
+```
+
+The setup in this case is mostly the same as the setup used in the [Athena demo](https://jjacobs.me/dsan6000/writeups/athena/) at the end of Week 6, but with the additional complexity of a **hive-partitioned** folder structure. So, in this case you should set up Athena as follows:
+
+1. 
+
+Use the following 
+
+```sql
+SELECT
+  min(latitude) AS min_lat,
+  min(longitude) AS min_lon,
+  max(latitude) AS max_lat,
+  max(longitude) AS max_lon,
+  cast(sum(population) as integer) AS population
+FROM yemen_2020
+WHERE type='total_population';
+```
+
+### Task 2: Checking Gender-Specific Estimates
+
+
 
 ## HW6 Submission
 
 Since you submitted your GitHub URL all the way up at the top of the instructions, all that is left is for you to **push your work from EC2 to GitHub**. If you push a commit with the commit message **"Final submission"** (by running `git commit -m "Final submission"` and then `git push`), we will consider your repo ready to grade – otherwise, if no commit with this message is found, we will consider the **most recent commit when the due date is reached** to be your final submission.
+
+---
+
+<a name="fn1">1</a>. For the GIS folks (who know that the Earth is slightly "wider" than it is "tall"!), the real grid being used is 1 [*arcsecond*](https://support.esri.com/en-us/gis-dictionary/arcsecond) by 1 arcsecond: a single *degree* of latitude is subdivided into 60 arcminutes, and each of these arcminutes is in turn divided into 60 arcseconds. Then, near the equator, moving 1 arcsecond corresponds to a movement of [about 30 meters](https://www.opendem.info/arc2meters.html), hence the "simplified" metric grid here. [↩︎](#fn1loc)
 
 ---
 
