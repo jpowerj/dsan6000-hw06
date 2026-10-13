@@ -205,8 +205,6 @@ As you can see in the map below from the 1930s, there was a key road leading fro
 
 <p align="center" width="100%">
     <img width="60%" src='images/Aden_Protectorate.jpg'></img>
-</p>
-<p align="center" width="100%">
     <a href='https://www.tandfonline.com/doi/full/10.1080/03086534.2015.1123976'><i>Image Source</i></a>
 </p>
 
