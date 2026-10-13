@@ -164,6 +164,32 @@ After those two steps, the rest of the information here is up to you to figure o
   * `"women"`
   * `"youth_15_24"`
 
+Since you will need to know the exact `adm1` values for some of the queries below, these are reproduced in the following table:
+
+| adm1             | GID_1    | GID_0   | COUNTRY   | NL_NAME_1     | TYPE_1    | ENGTYPE_1   |
+|:-----------------|:---------|:--------|:----------|:--------------|:----------|:------------|
+| Aden             | YEM.1_1  | YEM     | Yemen     | عدن           | Muhafazah | Governorate |
+| Abyan            | YEM.2_1  | YEM     | Yemen     | أبين          | Muhafazah | Governorate |
+| Al Bayda'        | YEM.3_1  | YEM     | Yemen     | البيضاء       | Muhafazah | Governorate |
+| Al Dali'         | YEM.4_1  | YEM     | Yemen     | الضالع        | Muhafazah | Governorate |
+| Al Hudaydah      | YEM.5_1  | YEM     | Yemen     | الحديده       | Muhafazah | Governorate |
+| Al Jawf          | YEM.6_1  | YEM     | Yemen     | الجوف         | Muhafazah | Governorate |
+| Al Mahrah        | YEM.7_1  | YEM     | Yemen     | المهره        | Muhafazah | Governorate |
+| Al Mahwit        | YEM.8_1  | YEM     | Yemen     | المحويت       | Muhafazah | Governorate |
+| Amanat Al Asimah | YEM.9_1  | YEM     | Yemen     | أمانة العاصمة | Muhafazah | Governorate |
+| Amran            | YEM.10_1 | YEM     | Yemen     | عمران         | Muhafazah | Governorate |
+| Dhamar           | YEM.11_1 | YEM     | Yemen     | ذمار          | Muhafazah | Governorate |
+| Hadramawt        | YEM.12_1 | YEM     | Yemen     | حضرموت        | Muhafazah | Governorate |
+| Hajjah           | YEM.13_1 | YEM     | Yemen     | حجه           | Muhafazah | Governorate |
+| Ibb              | YEM.14_1 | YEM     | Yemen     | إب            | Muhafazah | Governorate |
+| Lahij            | YEM.15_1 | YEM     | Yemen     | لحج           | Muhafazah | Governorate |
+| Ma'rib           | YEM.16_1 | YEM     | Yemen     | مأرب          | Muhafazah | Governorate |
+| Raymah           | YEM.17_1 | YEM     | Yemen     | ريمة          | Muhafazah | Governorate |
+| Sa'dah           | YEM.18_1 | YEM     | Yemen     | صعدة          | Muhafazah | Governorate |
+| Sana'a           | YEM.19_1 | YEM     | Yemen     | صنعاء         | City      | City        |
+| Shabwah          | YEM.20_1 | YEM     | Yemen     | شبوة          | Muhafazah | Governorate |
+| Ta'izz           | YEM.21_1 | YEM     | Yemen     | تعز           | Muhafazah | Governorate |
+
 Once you have finished filling out the relevant information, clicking **"Create table"** will bring you back to the main query editor. You'll see a new query, the table creation query, which it will also run automatically.
 
 If all went as planned, you will get a "successful query" message. However, there is **one more step** you'll need to carry out: if you interpreted the above schema as intended, the data in the **files themselves** are ready for querying, but Athena needs to scan the scan the "folder structure" within the bucket to detect and update its **data catalog** for efficient querying of the **Hive-partitioned** `.csv` files.
@@ -195,7 +221,7 @@ If your table was set up correctly, this should produce a **table of results** b
 
 This is below the UN-estimated 2020 population of about 30 million (computed from the dataset [cited above](https://data.humdata.org/es/dataset/yemen-population-estimates)), but it may actually be more accurate, since it is very difficult to model population outflows during civil wars solely by extrapolating from earlier censuses (i.e., without this satellite imagery)!
 
-### Question 1.3: The Aden Protectorate vs. Sana'a Imamate
+### Question 1.2: The Aden Protectorate vs. The Sana'a Imamate
 
 We now return to the scenario described above, where you're a researcher hoping to analyze whether **demographic factors** might explain the presence or absence of political violence across different regions of Yemen.<a name='fn2loc'></a><sup>[2](#fn2)</sup>
 
@@ -204,24 +230,29 @@ As discussed in [this paper with more citations than any paper I've ever seen in
 As you can see in the map below from the 1930s, there was a key road leading from **Mocha** (yes, it's actually where mocha frappuccinos come from!) to **Sana'a**, the current capital of Yemen and also the capital of the [**Imamate of North Yemen**](https://en.wikipedia.org/wiki/Kingdom_of_Yemen), which was technically **independent of** Britain. On the other hand, at the bottom of the map you can see the [**Aden Protectorate**](https://en.wikipedia.org/wiki/Aden_Protectorate), a territory ruled directly by Britain from 1839 until 1967.
 
 <p align="center" width="100%">
-    <img width="60%" src='images/Aden_Protectorate.jpg'></img><br>
+    <img width="70%" src='images/Aden_Protectorate.jpg'></img><br>
     <a href='https://www.tandfonline.com/doi/full/10.1080/03086534.2015.1123976'><i>Image Source</i></a>
 </p>
 
+Given this background, a researcher might be interested in comparing demographic information between **Sana'a** in the north and **Aden** in the south... And that researcher in this case is you!
 
-Copy-and-paste your **new SQL expression** for this task into a file called `YEM_gender_sum.sql`, and include it as part of your repo when pushing to GitHub.
+To begin with, modify the query from Question 1.1 so that, instead of summing the `total_population` estimates across the entirety of Yemen, it sums these estimates **separately** for **Sana'a** and **Aden**. That is, in place of the single row in the result from Question 1.1, you should now have **two** rows, one per `adm1` value (make sure that these `adm1` values are also returned as columns in the results, so that graders can tell which row represents which region!)
 
-Then, once you have **run** the query within the Athena web UI, click the "Download results CSV" button above and to the right of the results table, and instead of the UUID-based default filename, include it in your repo as `YEM_gender_sum_result.csv`, and make sure it is included when pushing your repo to GitHub.
+Copy-and-paste the **SQL expression** you write for this task into a file called `YEM_capitals.sql`, and include it as part of your repo when pushing to GitHub.
 
-You should find that, for 
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_gender_sum_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
 
 ### Question 1.4: PDRY vs. YAR
 
-<center>
+As might have been anticipated in light of these differing colonial experiences, the "era of decolonization" after World War II again gave rise to different political regimes in the north and south of the country. While anti-*monarchical* forces in the **north** deposed the imam and established the **Yemen Arab Republic (YAR)** in 1962, aligned with Gamal Abdel Nasser's pan-Arab nationalist regime in Egypt, anti-*colonial* forces in the south fought for 5 more years before achieving independence from Britain in 1967.
 
-<img src='images/Divided_Yemen.svg' width='80%'></img>
+At that point, since the revolutionaries in the south espoused a *communist* rather than *pan-Arab-nationalist* agenda for Yemen's future, they opted *not* to unite with the YAR, instead establishing the Marxist-Leninist **People's Democratic Republic of Yemen (PDRY)** and forming close relationships with the Soviet Union and Cuba.
 
-</center>
+<p align="center" width="100%">
+    <img src='images/Divided_Yemen.svg' width='80%'></img>
+</p>
+
+Given this background, a researcher might be interested in comparing the relative **elderly** and **young** populations of two sub-regions of modern Yemen corresponding to the two former countries: since the countries re-united to form a single nation in 1990, the **youth** across both regions may have a shared Yemeni-nationalist ideology, whereas the **elderly** may be more divided along the former pan-Arab vs. communist lines.<a name='fn3loc'></a><sup>[3](#fn3)</sup>
 
 ### Question 1.5: Modern Yemen
 
@@ -252,6 +283,8 @@ Since you submitted your GitHub URL all the way up at the top of the instruction
 <a name="fn1">1</a>. For the GIS folks (who know that the Earth is slightly "wider" than it is "tall"!), the real grid being used is 1 [*arcsecond*](https://support.esri.com/en-us/gis-dictionary/arcsecond) by 1 arcsecond: a single *degree* of latitude is subdivided into 60 arcminutes, and each of these arcminutes is in turn divided into 60 arcseconds. Then, near the equator, moving 1 arcsecond corresponds to a movement of [about 30 meters](https://www.opendem.info/arc2meters.html), hence the "simplified" metric grid here. [↩︎](#fn1loc)
 
 <a name="fn2">2</a>. Once again, since this is not a social science class, we won't actually do the additional work of "linking" the ACLED data with the demographic data we're analyzing in this assignment. But, for your **final projects**, this is the kind of final step that you could carry out once you've tackled the core DSAN 6000 problem ("the size of the data is part of the engineering problem")! [↩︎](#fn2loc)
+
+<a name="fn2">3</a>. Again pulling the not-a-social-science-class card here... in reality this hypothesized elder-versus-youth divide is probably quite far down the list of important factors for understanding the present-day Civil War. But, in the absence of more in-depth data on things like occupation, linkages with various religious movements, family connections to Saudi Arabia and/or the UAE, and so on, this is what we can explore here! Remember that a key part of science is actually *testing* our hunches about what is and is not important! [↩︎](#fn3loc)
 
 ---
 
