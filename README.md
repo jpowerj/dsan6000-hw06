@@ -254,6 +254,8 @@ At that point, since the revolutionaries in the south espoused a *communist* rat
 
 Given this background, a researcher might be interested in comparing the relative **elderly** and **young** populations of two sub-regions of modern Yemen corresponding to the two former countries: since the countries re-united to form a single nation in 1990, the **youth** across both regions may have a shared Yemeni-nationalist ideology, whereas the **elderly** may be more divided along the former pan-Arab vs. communist lines.<a name='fn3loc'></a><sup>[3](#fn3)</sup>
 
+So, using the following table 
+
 ### Question 1.5: Modern Yemen
 
 <center>
