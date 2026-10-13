@@ -81,52 +81,31 @@ To create this Access Token, **follow the instructions [here](https://docs.githu
 
 ## HW6 Task: Direct Queries on an S3-Based Data Lake
 
-This dataset was chosen for this assignment because it helps illustrate the **OnLine Analytics Processing (OLAP) "stage"** that we're moving towards in this second unit of the course: although the event information recorded in this dataset may stream **into** ACLED's database row-by-row, when it comes time to **analyze** it
+### Background
 
-> [!NOTE]
-> ### Setting Up Your `uv` Environment
-> 
-> In this class, to ensure that the Python libraries necessary for each assignment are installed on your EC2 instance, we will be using the [`uv` package manager](https://docs.astral.sh/uv/). Setting up `uv` and then activating the environment works as follows:
-> 
-> 1.  If you have not yet installed `uv` on your EC2 instance, run the following command within VSCode's Integrated Terminal:
-> 
->     ```bash
->     curl -LsSf https://astral.sh/uv/install.sh | sh
->     ```
-> 2.  With `uv` installed, within the cloned homework directory, just type `uv sync`, and `uv` will create a new Python environment (within a subdirectory it will create, called `.venv`) where all libraries necessary for this assignment are automatically installed.
-> 3.  Once the `uv sync` command has finished running, **activate** the created environment by executing
-> 
->     ```
->     source .venv/bin/activate`
->     ```
-> 4. If the environment was activated successfully, the command prompt in VSCode's Integrated Terminal should now have a `(dsan6000-hw06)` prefix. That is, the prompt should look like:
-> 
->     ```bash
->     (dsan6000-hw05) ubuntu@ip-172-31-78-63:~/dsan6000-hw06$ 
->     ```
->     
->     Instead of
->     
->     ```
->     ubuntu@ip-172-31-78-63:~/dsan6000-hw06$ 
->     ```
-> 
-> 5.  What we've done thus far means that you could now run "plain" `.py` files, and the necessary libraries would be ready for use. However, since we want to utilize **Jupyter notebooks** to write our code, we need to register this environment as a **kernel** that Jupyter can use to execute the code you write within Jupyter notebook code cells. To achieve this, we'll need the `ipykernel` library, which you should now install within your `uv` environment by executing the following command:
-> 
->     ```bash
->     uv pip install ipykernel
->     ```
-> 
-> 6.  Once `ipykernel` has been installed within your `uv` environment, the final step is to **register** this `uv` environment with Jupyter, so that it can be chosen as your desired environment within Jupyter (rather than the default "base" Python environment). To achieve this, execute the following command:
-> 
->     ```bash
->     python -m ipykernel install --user --name=hw06-kernel
->     ```
-> 7. Once this command has executed successfully, your assignment-specific `uv` environment is now ready for use as a Jupyter kernel! Unfortunately, the only way to get VSCode to detect this new kernel (so that it appears as an option when you choose the kernel for a Jupyter notebook) is by reloading VSCode. But, rather than closing the window and reconnecting, there's an easier approach! Oen the VSCode **Command Palette** using `Ctrl+Shift+P`, then start typing "Reload". You should see the full set of commands filter as you type, leaving the option **"Developer: Reload Window"** near the top. Click this command and your window should reload in the same state, but now with your kernel detected by VSCode.
+The dataset you'll be working with for this assignment is the global "High-Resolution Settlement Layer", a dataset constructed by Columbia's [Center for Integrated Earth Systems Information (CIESIN)](https://ciesin.columbia.edu/) where each row represents a tiny (30m-by-30m) "grid cell" on the surface of the earth, and the columns represent some statistically-inferred demographic information about that grid cell: for this assignment, we're focusing on the estimated **population** for various subgroups (men, women, youth under age 5, elderly over age 60, etc.) within this cell.
 
-The remaining instructions are given in a single Jupyter notebook:
+There are lots of important social-scientific reasons for utilizing these grid-based estimates, as a complement to the "standard" ways of chopping up territories that you might expect as the default choice: countries, states, provinces, etc... Since this isn't a social science course, however, I'll just quickly highlight two core factors that motivate the analyses in this assignment.
 
-* In `DSAN6000_HW6.ipynb` you will get your first hands-on experience with the **internals** of the `.parquet` columnar data storage format, especially its use of **Run-Length Encoding (RLE) compression** for massive file-size reduction. Then you will **take advantage of** these `.parquet` enhancements (relative to `.csv`), by querying a `.parquet` file *directly* from within an S3 bucket, loading only the data needed to execute the query (a massive improvement over the necessity, with `.csv` files, to load the entire file before issuing queries).
+### (1) Rapid Movement Across Political Boundaries
+
+The first factor is just that, with [117.8 million forcibly-displaced people](https://www.unhcr.org/refugee-statistics) in the world as of 2026 (and with this number growing each year), population groups shift rapidly on a day-to-day basis *across* the "standardized" geographic boundaries of countries and provinces.
+  
+With these population movements happening far too rapidly for a census to track (think of how, e.g., the US Census is only conducted once every 10 years), modern approaches to refugee aid provision instead use [remote sensing](https://en.wikipedia.org/wiki/Remote_sensing) – especially photos taken from satellites – to detect collections of pixels in these photos that might be indicative of new human activity (hence the "Settlement Layer" in the name of the dataset).
+
+### (2) Insufficiency of Census Data
+
+The second factor is that, on the topic of **censuses**, there are also major conflicts in the world (producing large proportions of the 117.8 million forcibly-displaced) in countries which **purposefully do *not* conduct censuses**, for avowedly political reasons.
+  
+One famous example is **Lebanon**, the country whose political events (in ACLED) you analyzed at the end of HW5! The last "official" census ever conducted in Lebanon took place in 1932, when it was still a French mandate, and its results were used to construct a quota-based presidential-parliamentary system striking a "delicate balance" among Lebanon's... dizzying array of [ethnic and religious populations](https://en.wikipedia.org/wiki/Demographics_of_Lebanon#/media/File:Lebanon_religious_groups_distribution.jpg).
+
+Since that time [crunching an entire country's history into one sentence], no administration since its 1943 independence from France has found it wise to "upset" this "delicate balance" by conducting a new census. Thus, for aid-delivery purposes, data derived from grid cells via satellite imagery is crucial for understanding the population landscape of Lebanon.
+
+Thinking counterfactually, and striving to find comparisons to test claims like *"we shouldn't conduct another census since it would spark a civil war"*, we can also look at Nigeria, where a history book like Eghosa Osaghae's [*Crippled Giant: Nigeria Since Independence*](https://www.dropbox.com/scl/fi/4e2kxfhpfks4j25obamaj/Crippled-giant-_-Nigeria-since-independence.pdf?rlkey=m4pjscx0t8v78vbfyfniu3xco&dl=1) has a section on "The Census Crisis" of 1963 as an early catalyst for [Civil War](https://en.wikipedia.org/wiki/Nigerian_Civil_War) 4 years later.
+
+### The Data Lake Infrastructure
+
+With the choice of this particular data motivated in the previous section, here the link with the DSAN 6000 material comes from **how this data is stored**: CEISIN updates the data each month,  **Data Lake pattern**
 
 ## HW6 Submission
 
