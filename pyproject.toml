@@ -1,0 +1,20 @@
+[project]
+name = "dsan6000-hw06"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jeff Jacobs", email = "jjacobs3@cs.stanford.edu" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "boto3>=1.43.111",
+    "pandas>=3.0.6",
+]
+
+[project.scripts]
+dsan6000-hw06 = "dsan6000_hw06:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
