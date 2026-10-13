@@ -91,7 +91,7 @@ There are lots of important social-scientific reasons for utilizing these grid-b
 
 The first factor is just that, with [117.8 million forcibly-displaced people](https://www.unhcr.org/refugee-statistics) in the world as of 2026 (and with this number growing each year), population groups shift rapidly on a day-to-day basis *across* the "standardized" geographic boundaries of countries and provinces.
   
-With these population movements happening far too rapidly for a census to track (think of how, e.g., the US Census is only conducted once every 10 years), modern approaches to refugee aid provision instead use [remote sensing](https://en.wikipedia.org/wiki/Remote_sensing) – especially photos taken from satellites – to detect collections of pixels in these photos that might be indicative of new human activity (hence the "Settlement Layer" in the name of the dataset).
+With these population movements happening far too rapidly for a census to track (think of how, e.g., the US Census is only conducted once every 10 years), modern approaches to refugee aid provision instead use [remote sensing](https://en.wikipedia.org/wiki/Remote_sensing) – especially photos taken from satellites – to detect collections of pixels in these photos that might be indicative of new human activity (hence the "Settlement Layer" in the name of the dataset). This does not eliminate the usefulness of censuses, however! Census estimates, when available, provide crucial **Bayesian priors** that are then updated based on the observed satellite imagery.
 
 ### (2) Insufficiency of Census Data
 
@@ -145,7 +145,7 @@ The setup in this case is mostly the same as the setup used in the [Athena demo]
 
     However, the panels on the **left side** of this interface are a bit misleading: despite its name, the **Data** panel is not the important one here. The important panel is beneath it, **Tables and views**, where you should click **Create** then **S3 bucket data**, which should open up the "Create table from S3 bucket data" page.
 
-2.  The **Table name** can be whatever you'd like, and under **Database configuration** you can just choose the default, or give it a new name if you'd like (this is somewhat like how DuckDB always has a "default" database ready for you to use, created right when it is launched).
+2.  The **Table name** can be whatever you'd like (I called it `yemen_2020`), and under **Database configuration** you can just choose the default, or give it a new name if you'd like (this is somewhat like how DuckDB always has a "default" database ready for you to use, created right when it is launched).
 
 After those two steps, the rest of the information here is up to you to figure out, from the above info along with the schema, which you should derive from the following info:
 
@@ -154,9 +154,31 @@ After those two steps, the rest of the information here is up to you to figure o
   * `latitude`: a `float` value representing the *first* coordinate of the *center* of the grid cell,
   * `longitude`: a `float` value representing the *second* coordinate of the *center* of the grid cell,
   * `population`: a `float` value representing the estimated population within that cell, and
-  * `adm1`: a `string` value containing the name of the "first administrative division" that the center of the grid cell lies within (within Yemen these are called *"Muhafazat"*, or "Governorates", with the exception of Sana'a *City* which is separated from the Sana'a Governorate around it. So, if the center lies within this city, its `adm1` value will be `"Sana'a"` – note the apostrophe, )
+  * `adm1`: a `string` value containing the name of the "first administrative division" that the center of the grid cell lies within (within Yemen these are called *"Muhafazat"*, or "Governorates", with the exception of Sana'a *City* which is separated from the Sana'a Governorate around it. So, if the center lies within this city, its `adm1` value will be `"Sana'a"` – note the apostrophe, which you'll need to handle in your queries below!)
+* Then, the last thing to note is that the data was **Hive-partitioned** based on a (categorical) `string` variable called `type`: this brings the file sizes down from GBs to MBs, and saves lots of potential computation time if you know in advance which of the following demographic groups you want to obtain estimates for. Alphabetically, the possible values are:
+  * `"children_under_five"`
+  * `"elderly_sixty_plus"`
+  * `"men"`
+  * `"total_population"`
+  * `"women_of_reproductive_age_15_49"`
+  * `"women"`
+  * `"youth_15_24"`
 
-Use the following 
+Once you have finished filling out the relevant information, clicking **"Create table"** will bring you back to the main query editor. You'll see a new query, the table creation query, which it will also run automatically.
+
+If all went as planned, you will get a "successful query" message. However, there is **one more step** you'll need to carry out: if you interpreted the above schema as intended, the data in the **files themselves** are ready for querying, but Athena needs to scan the scan the "folder structure" within the bucket to detect and update its **data catalog** for efficient querying of the **Hive-partitioned** `.csv` files.
+
+To accomplish this, use the "Tables" listing within the **Tables and views** panel in the bottom left, where you should see your newly-created table (as mentioned above, in my case it's called `yemen_2020`): click the three-dots icon to the right of the table name, and then choose **Load partitions** from the dropdown menu that appears.
+
+All this does is load the following new query into the query editor, and automatically runs it for you (`MSCK` is short for "Metastore Check", if you're curious):
+
+```sql
+MSCK REPAIR TABLE `yemen_2020`;
+```
+
+If this completes successfully, you should see a message at the bottom indicating that it has detected the different possible `type` values, which means you are fully ready to query the contents of the S3 bucket using SQL, just as if it was a full-on relational DB (like you'd have in a Data Warehouse setup)!
+
+Since that was a lot of work, here we provide the first query for you. Copy and paste the following query into the query editor and then click the orange **Run** button:
 
 ```sql
 SELECT
@@ -169,30 +191,33 @@ FROM yemen_2020
 WHERE type='total_population';
 ```
 
-### Question 1.2: Checking Gender-Specific Estimates
+If your table was set up correctly, this should produce a **table of results** below the query editor, which should just have one row containing the minimum and maximum latitude and longitude values across all queried data (this is just for sanity-checking purposes), along with a **total population estimate** of 26,832,212.
 
-As a sanity check (though, as you'll see, it will sadly end up decreasing sanity), rewrite the above expression so that instead of directly querying data with `type='total_population'`, it queries data where **either** `type='man'` **or** `type='woman'`, and sums these gender-specific population estimates together.
+This is below the UN-estimated 2020 population of about 30 million (computed from the dataset [cited above](https://data.humdata.org/es/dataset/yemen-population-estimates)), but it may actually be more accurate, since it is very difficult to model population outflows during civil wars solely by extrapolating from earlier censuses (i.e., without this satellite imagery)!
+
+### Question 1.3: The Aden Protectorate vs. Sana'a Imamate
+
+We now return to the scenario described above, where you're a researcher hoping to analyze whether **demographic factors** might explain the presence or absence of political violence across different regions of Yemen.<a name='fn2loc'></a><sup>[2](#fn2)</sup>
+
+As discussed in [this paper with more citations than any paper I've ever seen in my PhD field](https://scholar.google.com/scholar?hl=en&as_sdt=0%2C9&q=acemoglu+colonial+origins+of+comparative+development&btnG=), colonial institutions typically have a strong impact on subsequent trajectories (in terms of "development" as well as political conflict). So, let's quickly take a look at how we might set up a query examining sub-regions of Yemen with differing **colonial histories**.
+
+As you can see in the map below from the 1930s, there was a key road leading from **Mocha** (yes, it's actually where mocha frappuccinos come from!) to **Sana'a**, the current capital of Yemen and also the capital of the [**Imamate of North Yemen**](https://en.wikipedia.org/wiki/Kingdom_of_Yemen), which was technically **independent of** Britain. On the other hand, at the bottom of the map you can see the [**Aden Protectorate**](https://en.wikipedia.org/wiki/Aden_Protectorate), a territory ruled directly by Britain from 1839 until 1967.
+
+<center>
+
+<figure>
+<img src='images/Aden_Protectorate.jpg' width='80%'></img>
+<figcaption><a href='https://www.tandfonline.com/doi/full/10.1080/03086534.2015.1123976'><i>Image Source</i></a></figcaption>
+</figure>
+
+</center>
+
 
 Copy-and-paste your **new SQL expression** for this task into a file called `YEM_gender_sum.sql`, and include it as part of your repo when pushing to GitHub.
 
 Then, once you have **run** the query within the Athena web UI, click the "Download results CSV" button above and to the right of the results table, and instead of the UUID-based default filename, include it in your repo as `YEM_gender_sum_result.csv`, and make sure it is included when pushing your repo to GitHub.
 
 You should find that, for 
-
-### Question 1.3: The Aden Protectorate vs. Sana'a Imamate
-
-<center>
-
-<figure>
-<img src='images/Aden_Protectorate.jpg' width='80%'></img>
-<figcaption>
-
-The road on the left side of the map leads up to Sana'a, the capital of the [Zaydi Imamate of North Yemen](https://en.wikipedia.org/wiki/Kingdom_of_Yemen), and all the way to the south from Sana'a you can see the [Aden Protectorate](https://en.wikipedia.org/wiki/Aden_Protectorate), a British colony from 1830 until 
-
-</figcaption>
-</figure>
-
-</center>
 
 ### Question 1.4: PDRY vs. YAR
 
@@ -229,6 +254,8 @@ Since you submitted your GitHub URL all the way up at the top of the instruction
 ---
 
 <a name="fn1">1</a>. For the GIS folks (who know that the Earth is slightly "wider" than it is "tall"!), the real grid being used is 1 [*arcsecond*](https://support.esri.com/en-us/gis-dictionary/arcsecond) by 1 arcsecond: a single *degree* of latitude is subdivided into 60 arcminutes, and each of these arcminutes is in turn divided into 60 arcseconds. Then, near the equator, moving 1 arcsecond corresponds to a movement of [about 30 meters](https://www.opendem.info/arc2meters.html), hence the "simplified" metric grid here. [↩︎](#fn1loc)
+
+<a name="fn2">2</a>. Once again, since this is not a social science class, we won't actually do the additional work of "linking" the ACLED data with the demographic data we're analyzing in this assignment. But, for your **final projects**, this is the kind of final step that you could carry out once you've tackled the core DSAN 6000 problem ("the size of the data is part of the engineering problem")! [↩︎](#fn2loc)
 
 ---
 
