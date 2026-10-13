@@ -236,13 +236,13 @@ As you can see in the map below from the 1930s, there was a key road leading fro
 
 Given this background, a researcher might be interested in comparing demographic information between **Sana'a** in the north and **Aden** in the south... And that researcher in this case is you!
 
-To begin with, modify the query from Question 1.1 so that, instead of summing the `total_population` estimates across the entirety of Yemen, it sums these estimates **separately** for **Sana'a** and **Aden**. That is, in place of the single row in the result from Question 1.1, you should now have **two** rows, one per `adm1` value (make sure that these `adm1` values are also returned as columns in the results, so that graders can tell which row represents which region!)
+Modify the query from Question 1.1 so that, instead of summing the `total_population` estimates across the entirety of Yemen, it sums these estimates **separately** for **Sana'a** and **Aden**. That is, in place of the single row in the result from Question 1.1, you should now have **two** rows, one per `adm1` value (make sure that these `adm1` values are also returned as columns in the results, so that graders can tell which row represents which region!)
 
 Copy-and-paste the **SQL expression** you write for this task into a file called `YEM_capitals.sql`, and include it as part of your repo when pushing to GitHub.
 
-Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_gender_sum_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_capitals_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
 
-### Question 1.4: PDRY vs. YAR
+### Question 1.3: PDRY vs. YAR
 
 As might have been anticipated in light of these differing colonial experiences, the "era of decolonization" after World War II again gave rise to different political regimes in the north and south of the country. While anti-*monarchical* forces in the **north** deposed the imam and established the **Yemen Arab Republic (YAR)** in 1962, aligned with Gamal Abdel Nasser's pan-Arab nationalist regime in Egypt, anti-*colonial* forces in the south fought for 5 more years before achieving independence from Britain in 1967.
 
@@ -254,9 +254,30 @@ At that point, since the revolutionaries in the south espoused a *communist* rat
 
 Given this background, a researcher might be interested in comparing the relative **elderly** and **young** populations of two sub-regions of modern Yemen corresponding to the two former countries: since the countries re-united to form a single nation in 1990, the **youth** across both regions may have a shared Yemeni-nationalist ideology, whereas the **elderly** may be more divided along the former pan-Arab vs. communist lines.<a name='fn3loc'></a><sup>[3](#fn3)</sup>
 
-So, using the following table 
+The following code provides a (rough) mapping of the modern governorates of Yemen to the pre-unification country they belonged to (as Python code, but, hopefully still helpful for copying-and-pasting into your SQL query!)
 
-### Question 1.5: Modern Yemen
+```python
+part_map = {
+  "YAR": [
+    "Al Bayda'", "Sana'a", "Al Dali'", "Al Hudaydah", "Al Jawf",
+    "Al Mahwit", "Amanat Al Asimah", "Amran", "Dhamar", "Hajjah",
+    "Ibb", "Ma'rib", "Raymah", "Sa'dah", "Ta'izz",
+  ],
+  "PDRY": [
+    "Aden", "Abyan", "Al Mahrah", "Hadramawt", "Lahij", "Shabwah",
+  ]
+}
+```
+
+Use this mapping to construct a query in the Athena query editor for obtaining the **total elderly (60+) population** and **total youth (15-24) population** living in the former YAR and the former PDRY (separately). The result of your query should be a table with **four rows**, two for the elderly populations and two for the youth populations of the two regions. The rows should be **sorted** (**ordered**) first by the `type` variable (`"elderly_60_plus"` then `"youth_15_24"`) and then by the acronyms of the former countries (`"PDRY"` then `"YAR"`).
+
+Copy-and-paste the **SQL expression** you write for this task into a file called `YEM_youth_elderly.sql`, and include it as part of your repo when pushing to GitHub.
+
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_youth_elderly_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
+
+### Question 1.4: Your First Geospatial Query!
+
+As you may be abe to tell by quickly looking back and forth between (or overlaying) the above pre-1990 map and the following present-day map, the post-1990 governorates in fact do **not** perfectly map onto the pre-1990 divisions within each country!
 
 <center>
 
@@ -264,11 +285,7 @@ So, using the following table
 
 </center>
 
-<center>
-
-<img src='images/2026_September_Yemen.svg' width='80%'></img>
-
-</center>
+ While you *could* take the GIS class and learn how to carry out an [areal-weighted interpolation](https://jjacobs.me/ppol6805/writeups/interpolation/) (which some of yall are doing, in which case you just learned how this method works!), here we'll take a simpler approach: taking the present-day map of Yemen and simply **drawing** the former PDRY boundaries onto it! You could then repeat this process for the YAR, but for the sake of this question just one query should suffice for grasping the concept.
 
 ## Part 2: Querying Global Data
 
@@ -286,7 +303,12 @@ Since you submitted your GitHub URL all the way up at the top of the instruction
 
 <a name="fn2">2</a>. Once again, since this is not a social science class, we won't actually do the additional work of "linking" the ACLED data with the demographic data we're analyzing in this assignment. But, for your **final projects**, this is the kind of final step that you could carry out once you've tackled the core DSAN 6000 problem ("the size of the data is part of the engineering problem")! [↩︎](#fn2loc)
 
-<a name="fn2">3</a>. Again pulling the not-a-social-science-class card here... in reality this hypothesized elder-versus-youth divide is probably quite far down the list of important factors for understanding the present-day Civil War. But, in the absence of more in-depth data on things like occupation, linkages with various religious movements, family connections to Saudi Arabia and/or the UAE, and so on, this is what we can explore here! Remember that a key part of science is actually *testing* our hunches about what is and is not important! [↩︎](#fn3loc)
+<a name="fn3">3</a>. Again pulling the not-a-social-science-class card here... in reality this hypothesized elder-versus-youth divide is probably quite far down the list of important factors for understanding the present-day Civil War. But, in the absence of more in-depth data on things like occupation, linkages with various religious movements, family connections to Saudi Arabia and/or the UAE, and so on, this is what we can explore here! Remember that a key part of science is actually *testing* our hunches about what is and is not important! Also note that the former PDRY-YAR divide *does* nonetheless bear a pretty striking resemblance to the following somewhat-up-to-date (September 2026) map of who controls what in the Yemeni Civil War: [↩︎](#fn3loc)
+
+<p align="center" width="100%">
+    <img src='images/2026_September_Yemen.svg' width='50%'></img><br>
+    <a href='https://commons.wikimedia.org/wiki/File:Yemeni_Civil_War.svg'><i>Image Source</i></a>
+</p>
 
 ---
 
