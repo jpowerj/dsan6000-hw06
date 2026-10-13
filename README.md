@@ -203,14 +203,13 @@ As discussed in [this paper with more citations than any paper I've ever seen in
 
 As you can see in the map below from the 1930s, there was a key road leading from **Mocha** (yes, it's actually where mocha frappuccinos come from!) to **Sana'a**, the current capital of Yemen and also the capital of the [**Imamate of North Yemen**](https://en.wikipedia.org/wiki/Kingdom_of_Yemen), which was technically **independent of** Britain. On the other hand, at the bottom of the map you can see the [**Aden Protectorate**](https://en.wikipedia.org/wiki/Aden_Protectorate), a territory ruled directly by Britain from 1839 until 1967.
 
-<center>
+<p align="center" width="100%">
 
-<figure>
-<img src='images/Aden_Protectorate.jpg' width='80%'></img>
-<figcaption><a href='https://www.tandfonline.com/doi/full/10.1080/03086534.2015.1123976'><i>Image Source</i></a></figcaption>
-</figure>
+<img width="60%" src='images/Aden_Protectorate.jpg'></img><br>
 
-</center>
+<a href='https://www.tandfonline.com/doi/full/10.1080/03086534.2015.1123976'><i>Image Source</i></a>
+
+</p>
 
 
 Copy-and-paste your **new SQL expression** for this task into a file called `YEM_gender_sum.sql`, and include it as part of your repo when pushing to GitHub.
