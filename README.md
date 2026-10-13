@@ -131,7 +131,7 @@ Thus, although in the next part we'll "zoom out" to queries across the entire gl
 
 The last census conducted in Yemen was in 2004, and modern estimates have to be [inferred from this 22-year-old data](https://data.humdata.org/es/dataset/yemen-population-estimates/resource/5a3cb3f9-5148-4f5d-b269-f50c5a81a2d3), meaning that they become less and less reliable over time (especially given the acceleration of forcible displacement after the start of the Civil War in 2014). So, let's use **Athena** to carry out some basic analytics of the population, not based on inferences from 2004 but instead based on the remotely-sensed CIESIN estimates!
 
-### Task 1 (Code Provided): An Overall Population Estimate
+### Question 1.1 (Code Provided): An Overall Population Estimate
 
 First things first, you will need to set up your **Athena Console**, within the **AWS Console** web UI, to carry out queries on the S3 bucket. The bucket containing the Yemen data is located at the following URI:
 
@@ -156,9 +156,58 @@ FROM yemen_2020
 WHERE type='total_population';
 ```
 
-### Task 2: Checking Gender-Specific Estimates
+### Question 1.2: Checking Gender-Specific Estimates
 
+As a sanity check (though, as you'll see, it will sadly end up decreasing sanity), rewrite the above expression so that instead of directly querying data with `type='total_population'`, it queries data where **either** `type='man'` **or** `type='woman'`, and sums these gender-specific population estimates together.
 
+Copy-and-paste your **new SQL expression** for this task into a file called `YEM_gender_sum.sql`, and include it as part of your repo when pushing to GitHub.
+
+Then, once you have **run** the query within the Athena web UI, click the "Download results CSV" button above and to the right of the results table, and instead of the UUID-based default filename, include it in your repo as `YEM_gender_sum_result.csv`, and make sure it is included when pushing your repo to GitHub.
+
+You should find that, for 
+
+### Question 1.3: The Aden Protectorate vs. Sana'a Imamate
+
+<center>
+
+<figure>
+<img src='images/Aden_Protectorate.jpg' width='80%'></img>
+<figcaption>
+
+The road on the left side of the map leads up to Sana'a, the capital of the [Zaydi Imamate of North Yemen](https://en.wikipedia.org/wiki/Kingdom_of_Yemen), and all the way to the south from Sana'a you can see the [Aden Protectorate](https://en.wikipedia.org/wiki/Aden_Protectorate), a British colony from 1830 until 
+
+</figcaption>
+</figure>
+
+</center>
+
+### Question 1.4: PDRY vs. YAR
+
+<center>
+
+<img src='images/Divided_Yemen.svg' width='80%'></img>
+
+</center>
+
+### Question 1.5: Modern Yemen
+
+<center>
+
+<img src='images/Pre-War_Yemen.svg' width='80%'></img>
+
+</center>
+
+<center>
+
+<img src='images/2026_September_Yemen.svg' width='80%'></img>
+
+</center>
+
+## Part 2: Querying Global Data
+
+Given that the data you've been analyzing – restricted just to the relatively tiny country of Yemen – already requires several GB, the notion of querying high-resolution settlement layer data across the entire *globe* should hurt your brain a bit, but should also help motivate why this task is especially well-suited to technologies we've been learning like **DuckDB**, **Polars**, and **Athena**, which enable analytic queries (like those you carried out in Part 1) without requiring all of the data to fit in RAM!
+
+So, in this part, you will "zoom out" from the approach you took in Part 1, and query **across multiple countries**, with Athena's query optimizer making sure that you only pay for the specific extraction and processing of data from the massive S3 bucket that is **absolutely necessary** for completing your query!
 
 ## HW6 Submission
 
