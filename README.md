@@ -141,7 +141,20 @@ s3://dsan6000-hrsl/yemen-2020/
 
 The setup in this case is mostly the same as the setup used in the [Athena demo](https://jjacobs.me/dsan6000/writeups/athena/) at the end of Week 6, but with the additional complexity of a **hive-partitioned** folder structure. So, in this case you should set up Athena as follows:
 
-1. 
+1.  If it's not the default page that you see when you navigate to the Athena Console, use [this link](https://us-east-1.console.aws.amazon.com/athena/home?region=us-east-1#/query-editor) to navigate to the Athena **Query Editor**. This is the UI which... basically just contains a big textbox allowing you to enter and run SQL queries on data stored in S3 buckets.
+
+    However, the panels on the **left side** of this interface are a bit misleading: despite its name, the **Data** panel is not the important one here. The important panel is beneath it, **Tables and views**, where you should click **Create** then **S3 bucket data**, which should open up the "Create table from S3 bucket data" page.
+
+2.  The **Table name** can be whatever you'd like, and under **Database configuration** you can just choose the default, or give it a new name if you'd like (this is somewhat like how DuckDB always has a "default" database ready for you to use, created right when it is launched).
+
+After those two steps, the rest of the information here is up to you to figure out, from the above info along with the schema, which you should derive from the following info:
+
+* The contents of the files in the S3 bucket, despite the `.csv` extension, are in fact **tab-separated values**, delimited by the `\t` character
+* Within each file, there are four columns you'll need to worry about, since you'll use them in your queries. In order, these are:
+  * `latitude`: a `float` value representing the *first* coordinate of the *center* of the grid cell,
+  * `longitude`: a `float` value representing the *second* coordinate of the *center* of the grid cell,
+  * `population`: a `float` value representing the estimated population within that cell, and
+  * `adm1`: a `string` value containing the name of the "first administrative division" that the center of the grid cell lies within (within Yemen these are called *"Muhafazat"*, or "Governorates", with the exception of Sana'a *City* which is separated from the Sana'a Governorate around it. So, if the center lies within this city, its `adm1` value will be `"Sana'a"` – note the apostrophe, )
 
 Use the following 
 
