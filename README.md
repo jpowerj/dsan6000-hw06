@@ -289,7 +289,7 @@ While you *could* take the GIS class and learn how to carry out a full-on [areal
 
 Clicking the following link should open up the "default" world map on geojson.io, and then it should specifically zoom in on Yemen (if it seems too zoomed-out... the island of [Socotra](https://en.wikipedia.org/wiki/Socotra) is part of Yemen despite being far offshore to its southeast!):
 
-> [https://geojson.io/?map=5.89/15.9964/47.50562](https://geojson.io/?map=5.89/15.9964/47.50562)
+> [**https://geojson.io/?map=5.89/15.9964/47.50562**](https://geojson.io/?map=5.89/15.9964/47.50562)
 
 Within the geojson.io interface, click the hexagon icon in the upper-left to start **drawing a `POLYGON` onto the map**, doing the best you can to trace out the boundaries of "mainland" PDRY (meaning, you don't need to include Socotra). In GIS world, a `POLYGON` is just a sequence of coordinates that **begins** and **ends** with the same coordinate, so that in the interface you can either "loop" outwards from your starting point and then return by clicking on the same point you started at, or just press enter when you're tired of clicking coordinates, to complete the drawing.
 
@@ -315,6 +315,12 @@ WHERE
   );
 ```
 
+If all went as planned, you should now see a result table with a single row, wherein the **population** column represents the estimated number of people living specifically within the `POLYGON` you drew in geojson.io!
+
+Copy-and-paste the **SQL expression** you wrote for this task into a file called `YEM_polygon.sql`, and include it as part of your repo when pushing to GitHub.
+
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_polygon_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
+
 ## Part 2: Querying Global Data
 
 Given that the data you've been analyzing – restricted just to the relatively tiny country of Yemen – already requires several GB, the notion of querying high-resolution settlement layer data across the entire *globe* should hurt your brain a bit, but should also help motivate why this task is especially well-suited to technologies we've been learning like **DuckDB**, **Polars**, and **Athena**, which enable analytic queries (like those you carried out in Part 1) without requiring all of the data to fit in RAM!
@@ -327,9 +333,47 @@ It is almost never possible to fully understand a civil war without analyzing th
 
 And now we get to a beautiful aspect of the full **global** (rather than just Yemeni) version of this High-Resolution Settlement Layer data: although the estimates were *computed* by the lab at Columbia, the organization tasked with *hosting* this computed data was Meta's beautiful ["AI for Good"](https://ai.meta.com/ai-for-good/docs/methodology-high-resolution-population-density-maps/) lab. And, as it turns out, Meta and its magnanimous overlord Mark Zuckergerg cared so much about using AI for good that, in their rush to use so much AI for so much good, they skipped right over all countries whose names begin with the letters A through M, and only added countries from CIESIN's data that start with the letter N onwards (so, starting with **N**amibia), to their S3 bucket.
 
-This is why, after ending HW5 with an analysis of events in **L**ebanon, we moved to **Y**emen in this assignment. And it's why, although we'd love to be able to conduct queries like those from Question 1 across the *entire* Arabian Peninsula, we can only analyze **Yemen**, **Oman**, and **Saudi Arabia**.
+This is why, after ending HW5 with an analysis of events in **L**ebanon, we moved to **Y**emen in this assignment. And it's why, although we'd love to be able to conduct queries like those from Question 1 across the *entire* Arabian Peninsula, we can only analyze **Yemen**, **Oman**, and **Saudi Arabia**.<a name='fn4loc'></a><sup>[4](#fn4)</sup>
+
+So, for this question, your task is to set up a new Athena table called `full_2020`, where instead of querying the `s3://dsan6000-hrsl/yemen-2020/` bucket you will not **directly query *Meta's* bucket** at the following URI:
+
+```
+s3://dataforgood-fb-data/csv/
+```
+
+There are two key differences between the structure of the Yemen-specific data and this full global data:
+
+* First, the `adm1` column is no longer present, so that the entire schema *within* each `.csv` file is just `latitude`, `longitude`, and `population` (all `float` values as described above).
+* Second, this data is partitioned across **multiple** variables:
+  * At the first level is `month`, though this has only one possible value, `"2019-06"`
+  * At the second level is `country`, with values corresponding to each country's [ISO-3 code](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes#Current_ISO_3166_country_codes)
+  * Finally, as was the case for the `yemen-2020` bucket, the lowest level which actually contains the `.csv` files themsleves is partitioned based on `type`, with the same possible values as in Question 1 (`"children_under_five"`, `"elderly_60_plus"`, `"men"`, `"total_population"`, `"women_of_reproductive_age_15_49"`, `"women"`, `"youth_15_24"`)
+
+So, with these changes in mind, your task is to set up Athena to enable queries on this Meta-hosted bucket, and then use the ISO-3 country codes linked above to write a query **estimating the total combined population of Yemen, Oman, and Saudi Arabia**.
+
+Copy-and-paste the **SQL expression** you write for this task into a file called `arabian_peninsula_total.sql`, and include it as part of your repo when pushing to GitHub.
+
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `arabian_peninsula_total_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
+
+### Question 2.2: Ja'fari Shi'a within Saudi Arabia
+
+Just as you used geojson.io to "scoop out" a subregion of modern Yemen that doesn't correspond directly to any administrative division in Question 1.3 above, here your task will be to estimate the population of a small eastern piece of Saudi Arabia historically inhabited by so-called "Twelver" **Ja'fari** Shi'a Muslims, the pink-colored region you can see to the west of Bahrain in the [**very-zoomable very-detailed map here**](https://gulf2000.columbia.edu/images/maps/Islam_Branches_in_Middle_East_lg.png) (the religious affinities and differences between this group and the "Zaidi" Shi'a of North Yemen from Question 1.2 are... far outside the scope of this course, but are important world-understanding-wise!)
+
+Clicking the following link should open upon geojson.io and then zoom the map in to encompass the total area of the three countries we're analyzing within the Arabian Peninsula:
+
+> [**https://geojson.io/?map=4.29/22.51273/45.38574**](https://geojson.io/?map=4.29/22.51273/45.38574)
+
+So, from there, zoom in on the eastern portion of Saudi Arabia and draw the Ja'fari-populated region from the map linked above as best as you can, then use the **Feature Editor** as you did in Question 1.4 to copy the WKT string to your clipboard! Once again, you are *not* being graded based on your drawing abilities – any `POLYGON` that vaguely captures this eastern region will be given full credit.
+
+Return to the Athena query editor and use this WKT string just as you did in Question 1.4 to **query just the total population of this sub-region**. To save a bit more of your $50 balance, you can modify your query from Question 2.1 to manually restrict it to just Saudi Arabia,  but this is not required for completion!
+
+Copy-and-paste the **SQL expression** you wrote for this task into a file called `baharna.sql`, and include it as part of your repo when pushing to GitHub. (The term ["Baharna"](https://en.wikipedia.org/wiki/Baharna) generally denotes the ethnoreligious population of Shi'a Arabs broadly spread across Eastern Arabia and Bahrain).
+
+Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `baharna_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
 
 ## HW6 Submission
+
+You made it! Thank you for your patience in working through this assignment (with, admittedly, much much more reading than usual).
 
 Since you submitted your GitHub URL all the way up at the top of the instructions, all that is left is for you to **push your work from EC2 to GitHub**. If you push a commit with the commit message **"Final submission"** (by running `git commit -m "Final submission"` and then `git push`), we will consider your repo ready to grade – otherwise, if no commit with this message is found, we will consider the **most recent commit when the due date is reached** to be your final submission.
 
@@ -346,7 +390,7 @@ Since you submitted your GitHub URL all the way up at the top of the instruction
     <a href='https://commons.wikimedia.org/wiki/File:Yemeni_Civil_War.svg'><i>Image Source</i></a>
 </p>
 
-<a name="fn4">4</a>. At this point you may be thinking, *"but Jeff, the **U**nited Arab Emirates comes after **N**amibia alphabetically!"* ...But alas, the countries are alphabetized by their [ISO-3 codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes#Current_ISO_3166_country_codes), and the UAE's code is in fact `ARE`. [↩︎](#fn4loc)
+<a name="fn4">4</a>. At this point you may be thinking, *"but Jeff, the **U**nited Arab Emirates comes after **N**amibia alphabetically!"* ...But alas, the countries are alphabetized by their [ISO-3 codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes#Current_ISO_3166_country_codes), and the UAE's code is in fact `ARE`. You are free to add Qatar to your analysis, since its code of `QAT` qualifies it for "AI for Good" usage, but Kuwait with `KWT` and Bahrain with `BHR` are disqualified from the "AI for Good" universe. With only a paltry [$1.942 Trillion USD](https://companiesmarketcap.com/meta-platforms/marketcap/) in market capitalization to work with, it's understandable why Meta sometimes has to tighten their belts and cut corners like this! [↩︎](#fn4loc)
 
 ---
 
