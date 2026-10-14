@@ -208,10 +208,10 @@ Since that was a lot of work, here we provide the first query for you. Copy and 
 
 ```sql
 SELECT
-  min(latitude) AS min_lat,
-  min(longitude) AS min_lon,
-  max(latitude) AS max_lat,
-  max(longitude) AS max_lon,
+  min(latitude) AS min_latitude,
+  min(longitude) AS min_longitude,
+  max(latitude) AS max_latitude,
+  max(longitude) AS max_longitude,
   cast(sum(population) as integer) AS population
 FROM yemen_2020
 WHERE type='total_population';
@@ -275,7 +275,7 @@ Copy-and-paste the **SQL expression** you write for this task into a file called
 
 Then, once you have **run** the query within the Athena web UI, and successfully obtained the results, click the "Download results CSV" button above the results table to download the result as `.csv`. Include this file in your repo as `YEM_youth_elderly_result.csv` (rather than the randomly-generated UUID that is used by default for the downloaded file!), and make sure it is included when pushing your repo to GitHub.
 
-### Question 1.4: Your First Geospatial Query!
+### Question 1.4: Your First Optimized Geospatial Query!
 
 As you may be abe to tell by quickly looking back and forth between (or overlaying) the above pre-1990 map and the following present-day map, the post-1990 governorates in fact do **not** perfectly map onto the pre-1990 divisions within each country!
 
@@ -285,13 +285,49 @@ As you may be abe to tell by quickly looking back and forth between (or overlayi
 
 </center>
 
- While you *could* take the GIS class and learn how to carry out an [areal-weighted interpolation](https://jjacobs.me/ppol6805/writeups/interpolation/) (which some of yall are doing, in which case you just learned how this method works!), here we'll take a simpler approach: taking the present-day map of Yemen and simply **drawing** the former PDRY boundaries onto it! You could then repeat this process for the YAR, but for the sake of this question just one query should suffice for grasping the concept.
+While you *could* take the GIS class and learn how to carry out a full-on [areal-weighted interpolation](https://jjacobs.me/ppol6805/writeups/interpolation/) (which some of yall are doing, in which case you just learned how this method works!), here we'll take a simpler approach: taking the present-day map of Yemen and simply **drawing** the former PDRY boundaries onto it! (You could then repeat this process for the YAR, but for the sake of this question I think just one query can suffice for grasping the concept!)
+
+Clicking the following link should open up the "default" world map on geojson.io, and then it should specifically zoom in on Yemen (if it seems too zoomed-out... the island of [Socotra](https://en.wikipedia.org/wiki/Socotra) is part of Yemen despite being far offshore to its southeast!):
+
+> [https://geojson.io/?map=5.89/15.9964/47.50562](https://geojson.io/?map=5.89/15.9964/47.50562)
+
+Within the geojson.io interface, click the hexagon icon in the upper-left to start **drawing a `POLYGON` onto the map**, doing the best you can to trace out the boundaries of "mainland" PDRY (meaning, you don't need to include Socotra). In GIS world, a `POLYGON` is just a sequence of coordinates that **begins** and **ends** with the same coordinate, so that in the interface you can either "loop" outwards from your starting point and then return by clicking on the same point you started at, or just press enter when you're tired of clicking coordinates, to complete the drawing.
+
+You are not being graded on the accuracy of your drawing! The goal is just to see how even these fancy **arbitrary geospatial queries** (arbitrary in the sense of not matching any pre-existing administrative division within the dataset) are optimized by Athena's query optimization engine to ensure that **only the necessary data** (in this case, only the necessary grid cells) is retrieved and added to the overall population sum.
+
+Once you have finished drawing the `POLYGON`, you should see a **"Feature Editor"** panel appear at the bottom of the interface. Open this panel up, then click on the **"Export"** tab on the right side. Of the three options in the dropdown box (WKT, GeoJSON, and BBOX), you can just use the default WKT option – click the **copy** button to the right of this dropdown box, and you have all of the information about your `POLYGON` now on your clipboard, ready for pasting back in the Athena interface!
+
+For the time being, however, just paste the WKT string somewhere accessible to you (in a new text file, for example, or a sticky note on your desktop). Return to the Athena query editor and paste the following code:
+
+```sql
+SELECT
+  min(latitude) AS min_latitude,
+  min(longitude) AS min_longitude,
+  max(latitude) AS max_latitude,
+  max(longitude) AS max_longitude,
+  cast(sum(population) as integer) AS population
+FROM yemen_2020
+WHERE
+  type='total_population'
+  AND ST_Within(
+    ST_Point(longitude, latitude),
+    ST_Polygon('<Your WKT string here>')
+  );
+```
 
 ## Part 2: Querying Global Data
 
 Given that the data you've been analyzing – restricted just to the relatively tiny country of Yemen – already requires several GB, the notion of querying high-resolution settlement layer data across the entire *globe* should hurt your brain a bit, but should also help motivate why this task is especially well-suited to technologies we've been learning like **DuckDB**, **Polars**, and **Athena**, which enable analytic queries (like those you carried out in Part 1) without requiring all of the data to fit in RAM!
 
-So, in this part, you will "zoom out" from the approach you took in Part 1, and query **across multiple countries**, with Athena's query optimizer making sure that you only pay for the specific extraction and processing of data from the massive S3 bucket that is **absolutely necessary** for completing your query!
+So, in this part, you will "zoom out" from the approach you took in Part 1, and query **across multiple countries**, with Athena's query optimizer making sure that you only pay for the specific extraction and processing of data from the massive S3 bucket that is **absolutely necessary** for completing your query! You have come a long way from just downloading all data as a giant `.csv` file and filtering afterwards 😸
+
+### Question 2.1: Querying the Arabian Peninsula
+
+It is almost never possible to fully understand a civil war without analyzing the **international context** surrounding it! As early as 1805, for example, the US was [intervening in wars of royal succession](https://en.wikipedia.org/wiki/Battle_of_Derna_(1805)) across Ottoman territories in North Africa, and conversely Britain ended up paying the US [$15.5 million in damages](https://en.wikipedia.org/wiki/Alabama_Claims) after providing military aid to the Confederacy throughout the US Civil War.
+
+And now we get to a beautiful aspect of the full **global** (rather than just Yemeni) version of this High-Resolution Settlement Layer data: although the estimates were *computed* by the lab at Columbia, the organization tasked with *hosting* this computed data was Meta's beautiful ["AI for Good"](https://ai.meta.com/ai-for-good/docs/methodology-high-resolution-population-density-maps/) lab. And, as it turns out, Meta and its magnanimous overlord Mark Zuckergerg cared so much about using AI for good that, in their rush to use so much AI for so much good, they skipped right over all countries whose names begin with the letters A through M, and only added countries from CIESIN's data that start with the letter N onwards (so, starting with **N**amibia), to their S3 bucket.
+
+This is why, after ending HW5 with an analysis of events in **L**ebanon, we moved to **Y**emen in this assignment. And it's why, although we'd love to be able to conduct queries like those from Question 1 across the *entire* Arabian Peninsula, we can only analyze **Yemen**, **Oman**, and **Saudi Arabia**.
 
 ## HW6 Submission
 
@@ -309,6 +345,8 @@ Since you submitted your GitHub URL all the way up at the top of the instruction
     <img src='images/2026_September_Yemen.svg' width='50%'></img><br>
     <a href='https://commons.wikimedia.org/wiki/File:Yemeni_Civil_War.svg'><i>Image Source</i></a>
 </p>
+
+<a name="fn4">4</a>. At this point you may be thinking, *"but Jeff, the **U**nited Arab Emirates comes after **N**amibia alphabetically!"* ...But alas, the countries are alphabetized by their [ISO-3 codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes#Current_ISO_3166_country_codes), and the UAE's code is in fact `ARE`. [↩︎](#fn4loc)
 
 ---
 
